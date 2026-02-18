@@ -20,7 +20,7 @@ import { RFPercentage } from 'react-native-responsive-fontsize';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { getApi } from '../config/api';
+import { getApi, BASE_IMAGE_URL } from '../config/api';
 
 const CourseDetails = () => {
   const navigation = useNavigation();
@@ -34,14 +34,15 @@ const CourseDetails = () => {
   // Helper for safe image URI
   const getImageUri = (item) => {
     try {
-      const img = item.thumbnail_image || item.banner_image || item.banner || item.thumbnail || item.image || item.image_url;
+      // Prioritize banner_image as requested by user
+      const img = item.banner_image || item.thumbnail_image || item.banner || item.thumbnail || item.image || item.image_url;
+
       if (!img || typeof img !== 'string') return null;
-      // Assuming BASE_IMAGE_URL is defined elsewhere or should be added.
-      // For now, I'll assume it's available or the user will define it.
-      // If not defined, this line will cause an error.
-      // For the purpose of this edit, I will assume BASE_IMAGE_URL is accessible.
+
+      // Use the imported BASE_IMAGE_URL
       return img.startsWith('http') ? img : `${BASE_IMAGE_URL}${img}`;
     } catch (e) {
+      console.log('Error generating image URI:', e);
       return null;
     }
   };

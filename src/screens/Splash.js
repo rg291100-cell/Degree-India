@@ -1,21 +1,16 @@
 import React, { Component, useEffect } from 'react';
 import { View, Text, StyleSheet, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const Splash = ({ navigation }) => {
-  // useEffect(() => {
-  //   const timer = setTimeout(() => {
-  //     navigation.replace('Login');
-  //   }, 5000);
+  // ... (existing code for checkAuth)
 
-  //   return () => clearTimeout(timer);
-  // }, [navigation]);
-
- const checkAuth = async () => {
+  const checkAuth = async () => {
     try {
       // Optional: Add a minimum splash duration for better UX
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       const token = await AsyncStorage.getItem('AUTH_TOKEN');
       console.log("Splash Token:", token);
 
@@ -52,12 +47,13 @@ const Splash = ({ navigation }) => {
 
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#FF3D00" />
       <Text style={styles.appName}>Degree India</Text>
-    </View>
+    </SafeAreaView>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

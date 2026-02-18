@@ -122,25 +122,29 @@ const Career = () => {
           <>
             <Text style={styles.heading}>Testimonials</Text>
 
-            <View style={styles.cardContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContainer}
+            >
               {testimonials.map((item, index) => (
                 <View key={index} style={styles.card}>
                   <Image
                     source={
-                      item.image
-                        ? { uri: item.image.startsWith('http') ? item.image : `${BASE_IMAGE_URL}${item.image}` }
+                      item.image_url
+                        ? { uri: item.image_url.startsWith('http') ? item.image_url : `${BASE_IMAGE_URL}${item.image_url}` }
                         : require('../assets/Icons/Applogo.png')
                     }
                     style={styles.avatar}
                   />
-                  <Text style={styles.title} numberOfLines={1}>{item.name || item.user_name || item.client_name || item.student_name || 'Anonymous'}</Text>
-                  <Text style={styles.subtitle} numberOfLines={1}>{item.designation || 'Student'}</Text>
+                  <Text style={styles.title} numberOfLines={1}>{item.title || item.name || 'Anonymous'}</Text>
+                  <Text style={styles.subtitle} numberOfLines={1}>{item.subtitle || item.designation || 'Student'}</Text>
                   <Text style={styles.desc} numberOfLines={4}>
-                    {item.message || item.testimonial || item.text || item.desc}
+                    {item.description || item.message || item.text || item.desc}
                   </Text>
                 </View>
               ))}
-            </View>
+            </ScrollView>
           </>
         )}
       </ScrollView>
@@ -196,40 +200,44 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignSelf: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     width: '95%',
+    flexWrap: 'wrap', // Allow wrapping if screen is small
   },
 
   stepText: {
     color: '#fff',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8, // Increased padding
     fontSize: 12,
+    marginTop: 2,
     fontFamily: 'Poppins-Regular',
-
   },
 
   actionContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 8,
+    justifyContent: 'space-between', // Changed to space-between
+    marginVertical: 10,
+    marginHorizontal: 15, // Added margin horizontal
   },
 
   actionButton: {
     backgroundColor: '#000',
     borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    width: '40%',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    width: '48%', // Increased width
     alignItems: 'center',
-    height: 50,
+    height: 55, // Increased height slightly
     justifyContent: 'center',
   },
 
   actionText: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 12, // Slightly smaller font to fit
     fontWeight: '600',
     fontFamily: 'Poppins-Regular',
+    textAlign: 'center',
   },
 
   iconGrid: {
@@ -268,22 +276,25 @@ const styles = StyleSheet.create({
 
   },
 
-  cardContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    flexWrap: 'wrap',
-    marginBottom: 30,
+  scrollContainer: {
+    paddingHorizontal: 15,
+    paddingBottom: 20,
   },
 
   card: {
-    width: '42%',
+    width: width * 0.7, // 70% of screen width
     backgroundColor: '#fff',
     borderRadius: 15,
-    borderWidth: 1.2,
-    borderColor: '#000',
-    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    padding: 15,
     alignItems: 'center',
-    marginVertical: 10,
+    marginRight: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   avatar: {

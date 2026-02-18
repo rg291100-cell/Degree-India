@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import Icon from "react-native-vector-icons/Ionicons";
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -25,30 +26,31 @@ import { BASE_IMAGE_URL, postApi } from '../config/api';
 const DAnimation = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { data: courseData } = route.params || {};
+  const { data: initialData } = route.params || {};
+  // Handle both direct offer item and nested course object
+  const courseData = initialData?.course || initialData || {};
+
   const [enrolling, setEnrolling] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
 
-  // Normalize data fields
+  // Normalize data fields with deep fallback
   const title = courseData?.course_title || courseData?.title || "Course Details";
-  const price = courseData?.discounted_fees || courseData?.price || "N/A";
-  const discount = courseData?.discount_percentage || "0";
-  const joined = courseData?.joined || "0";
+  const price = courseData?.discounted_fees || courseData?.price || courseData?.fees || "N/A";
+  const originalPrice = courseData?.fees || courseData?.price || "N/A";
+  const discount = courseData?.discount_percentage || courseData?.discount || "0";
+  const joined = courseData?.enrollment_count || courseData?.joined || "0";
   const rating = courseData?.rating || "4.5/5";
   const courseId = courseData?.course_id || courseData?.id;
 
-  const imageUrl = courseData?.thumbnail_image || courseData?.banner_image || courseData?.banner || courseData?.thumbnail || courseData?.image_url || courseData?.image;
+  const imageUrl = courseData?.banner_image || courseData?.thumbnail_image || courseData?.banner || courseData?.thumbnail || courseData?.image_url || courseData?.image;
 
   const finalImage = imageUrl
     ? { uri: imageUrl.startsWith('http') ? imageUrl : `${BASE_IMAGE_URL}${imageUrl}` }
     : require("../assets/Image/DAnimation.png");
 
-  // Log for debugging
-  console.log('Final Image URL:', finalImage);
-
-  // ✅ FIX: Handle enrollment via API
+  // ✅ RESTORED: Handle enrollment via API
   const handleEnrollNow = async () => {
     if (!courseId) {
       Alert.alert('Error', 'Course information is missing. Please try again.');
@@ -59,7 +61,7 @@ const DAnimation = () => {
       setEnrolling(true);
       const response = await postApi('/admissions/apply', {
         course_id: courseId,
-        payment_mode: 'offline' // Default to offline, can be changed later
+        payment_mode: 'offline'
       }, true);
 
       if (response.status) {
@@ -67,14 +69,8 @@ const DAnimation = () => {
           'Enrollment Successful!',
           'Your admission application has been submitted successfully. Our admin team will contact you via email for further process.',
           [
-            {
-              text: 'View My Admissions',
-              onPress: () => navigation.navigate('Admission')
-            },
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack()
-            }
+            { text: 'View My Admissions', onPress: () => navigation.navigate('Admission') },
+            { text: 'OK', onPress: () => navigation.goBack() }
           ]
         );
       } else {
@@ -82,10 +78,7 @@ const DAnimation = () => {
       }
     } catch (error) {
       console.log('Enrollment error:', error);
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || 'Failed to submit admission. Please try again.'
-      );
+      Alert.alert('Error', 'Failed to submit admission. Please try again.');
     } finally {
       setEnrolling(false);
     }
@@ -94,7 +87,10 @@ const DAnimation = () => {
   // ✅ FIX: Strip HTML tags from text
   const stripHtmlTags = (html) => {
     if (!html) return '';
-    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+    let text = html.replace(/<\/li>/g, '\n• ').replace(/<li>/g, '');
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    text = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+    return text;
   };
 
   // ✅ FIX: Handle course highlight card presses
@@ -103,22 +99,48 @@ const DAnimation = () => {
 
     switch (cardTitle) {
       case 'About Course':
-        message = stripHtmlTags(courseData?.description || courseData?.about) || 'Detailed course information will be provided by our team.';
+        const about = courseData?.description || courseData?.short_description || courseData?.about;
+        message = stripHtmlTags(about) || 'Detailed course information will be provided by our team.';
+        if (courseData?.course_advantage) {
+          message += '\n\nCourse Advantage:\n' + stripHtmlTags(courseData.course_advantage);
+        }
         break;
       case 'Fees & Payment':
-        message = `Total Fees: ₹${courseData?.fees || price}\nDiscounted Fees: ₹${price}\nAdmission Fee: ₹${courseData?.admission_fee || 'Contact admin'}\n\nPayment modes: Online/Offline`;
+        message = `Original Fees: ₹${originalPrice}\nDiscounted Fees: ₹${price}\nAdmission Fee: ₹${courseData?.admission_fee || 'Included'}\n\nPayment Mode: ${courseData?.course_mode || 'Contact Admin'}\nCurrency: ${courseData?.currency || 'INR'}`;
         break;
       case 'Admission Criteria':
-        message = stripHtmlTags(courseData?.admission_criteria || courseData?.eligibility) || 'Minimum qualification required. Contact our team for detailed admission criteria.';
+        const criteria = courseData?.admission_criteria || courseData?.eligibility_criteria || courseData?.eligibility;
+        if (Array.isArray(criteria)) {
+          message = criteria.map(c => `• ${c}`).join('\n');
+        } else {
+          message = stripHtmlTags(criteria) || 'Minimum qualification required. Contact our team for detailed admission criteria.';
+        }
+        if (courseData?.education_qualification) {
+          const eq = Array.isArray(courseData.education_qualification) ? courseData.education_qualification.join(', ') : courseData.education_qualification;
+          message += `\n\nQualification: ${eq}`;
+        }
         break;
       case 'Talk to Expert':
-        message = 'Our expert counselors will contact you shortly to guide you through the admission process. You can also call us at our helpline.';
+        message = 'Our expert counselors will contact you shortly to guide you through the admission process.\n\nHelpline: +91 (Direct Support)';
         break;
       case 'Academic Partners':
-        message = courseData?.college_name || courseData?.university || 'This course is offered in partnership with leading educational institutions.';
+        if (courseData?.academic_partners && Array.isArray(courseData.academic_partners)) {
+          message = courseData.academic_partners.map(p => `• ${p.name}`).join('\n');
+        } else {
+          message = courseData?.college_name || courseData?.university || courseData?.course_affiliation || 'This course is offered in partnership with leading educational institutions.';
+        }
         break;
       case 'Job Opportunities':
-        message = stripHtmlTags(courseData?.job_opportunities || courseData?.career_prospects) || 'Graduates from this course have excellent career opportunities in various sectors.';
+        const jobs = courseData?.job_opportunities || courseData?.career_prospects || courseData?.career_scope;
+        if (Array.isArray(jobs)) {
+          message = jobs.map(j => `• ${j}`).join('\n');
+        } else {
+          message = stripHtmlTags(jobs) || 'Graduates from this course have excellent career opportunities in various sectors.';
+        }
+        if (courseData?.employment_areas) {
+          const areas = Array.isArray(courseData.employment_areas) ? courseData.employment_areas.join(', ') : courseData.employment_areas;
+          message += `\n\nEmployment Areas: ${areas}`;
+        }
         break;
       default:
         message = 'Information will be provided by our team.';
@@ -130,42 +152,12 @@ const DAnimation = () => {
   };
 
   const data = [
-    {
-      id: 1,
-      title: "About Course",
-      Image: require("../assets/Image/Book1.png"),
-      bg: "#E8FFE8",
-    },
-    {
-      id: 2,
-      title: "Fees & Payment",
-      Image: require("../assets/Image/Book2.png"),
-      bg: "#FFE6F7",
-    },
-    {
-      id: 3,
-      title: "Admission Criteria",
-      Image: require("../assets/Image/Book3.png"),
-      bg: "#E0F4FF",
-    },
-    {
-      id: 4,
-      title: "Talk to Expert",
-      Image: require("../assets/Image/Book1.png"),
-      bg: "#E8FFE8",
-    },
-    {
-      id: 5,
-      title: "Academic Partners",
-      Image: require("../assets/Image/Book2.png"),
-      bg: "#FFE6F7",
-    },
-    {
-      id: 6,
-      title: "Job Opportunities",
-      Image: require("../assets/Image/Book3.png"),
-      bg: "#E0F4FF",
-    },
+    { id: 1, title: "About Course", Image: require("../assets/Image/Book1.png"), bg: "#E8FFE8" },
+    { id: 2, title: "Fees & Payment", Image: require("../assets/Image/Book2.png"), bg: "#FFE6F7" },
+    { id: 3, title: "Admission Criteria", Image: require("../assets/Image/Book3.png"), bg: "#E0F4FF" },
+    { id: 4, title: "Talk to Expert", Image: require("../assets/Image/Book1.png"), bg: "#E8FFE8" },
+    { id: 5, title: "Academic Partners", Image: require("../assets/Image/Book2.png"), bg: "#FFE6F7" },
+    { id: 6, title: "Job Opportunities", Image: require("../assets/Image/Book3.png"), bg: "#E0F4FF" },
   ];
 
   const ratingData = [
@@ -190,27 +182,18 @@ const DAnimation = () => {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* TOP IMAGE */}
-        {/* TOP IMAGE */}
-        <Image
-          source={finalImage}
-          style={styles.imageStyle}
-        />
+        <Image source={finalImage} style={styles.imageStyle} />
 
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => navigation.goBack()}
-          >
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-
           <Text style={styles.headerTitle} numberOfLines={2}>{title}</Text>
-
           <View style={{ width: 24 }} />
         </View>
 
-        {/* DISCOUNT */}
+        {/* DISCOUNT & PRICE */}
         <View style={styles.discountview}>
           <Text style={styles.discountText}>Upto {discount}% off</Text>
           <Text style={styles.priceText}>₹{price}</Text>
@@ -225,39 +208,49 @@ const DAnimation = () => {
         {/* SECTION TITLE */}
         <Text style={styles.title}>Course Highlights</Text>
 
-        {/* DYNAMIC HIGHLIGHTS / GOALS */}
+        {/* DYNAMIC HIGHLIGHTS */}
         <View style={styles.GoalView}>
           {(courseData?.course_highlights || courseData?.key_features || []).length > 0 ? (
-            (courseData?.course_highlights || courseData?.key_features || []).slice(0, 2).map((goal, index) => {
-              // Handle if goal is object {icon, name} or just string
-              const label = typeof goal === 'object' ? (goal.name || goal.title || goal.label || 'Goal') : goal;
-              // Clean up icon name (remove fa- prefix if present)
-              let iconName = typeof goal === 'object' ? (goal.icon || 'checkmark-circle-outline') : 'checkmark-circle-outline';
-              if (iconName && iconName.includes('fa-')) {
-                iconName = iconName.replace('fa fa-', '').replace('fa-', '').trim();
-              }
-              // Map some common fa- icons to ionicons if needed, or rely on vector-icons handling
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
+              {(courseData?.course_highlights || courseData?.key_features || []).map((goal, index) => {
+                const label = typeof goal === 'object' ? (goal.text || goal.name || goal.title || 'Feature') : goal;
+                const iconName = typeof goal === 'object' ? (goal.icon || 'star') : 'star';
 
-              return (
-                <TouchableOpacity key={index} style={styles.ButtonView}>
-                  <Icon name={iconName} color="#000" size={20} />
-                  <Text style={styles.goaltext} numberOfLines={1}>{label}</Text>
-                </TouchableOpacity>
-              );
-            })
+                const mapIcon = (name) => {
+                  if (!name) return 'star';
+                  const lower = name.toLowerCase();
+                  if (lower.includes('clock')) return 'clock';
+                  if (lower.includes('laptop')) return 'laptop-code';
+                  if (lower.includes('briefcase')) return 'briefcase';
+                  if (lower.includes('certificate')) return 'certificate';
+                  if (lower.includes('infinity')) return 'infinity';
+                  if (lower.includes('headset')) return 'headset';
+                  if (lower.includes('user-md')) return 'user-md';
+                  if (lower.includes('book')) return 'book';
+                  return name.replace(/fas?|far?|fal?|fab?|fa/g, '').replace(/fa-/g, '').trim() || 'star';
+                };
+
+                const finalIcon = mapIcon(iconName);
+
+                return (
+                  <View key={index} style={[styles.ButtonView, { marginRight: 10, minWidth: wp('45%'), paddingHorizontal: 15, marginBottom: 0 }]}>
+                    <FontAwesome5 name={finalIcon} color="#00BDD6" size={16} solid />
+                    <Text style={[styles.goaltext, { marginLeft: 10, fontSize: RFPercentage(1.6) }]}>{label}</Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
           ) : (
-            // Fallback: Show original Define Your Goal buttons if no data
-            <>
-              <TouchableOpacity style={styles.ButtonView}>
-                <Icon name="person-outline" color="#000" size={20} />
-                <Text style={styles.goaltext}>Define Your Goal</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.ButtonView}>
-                <Icon name="person-outline" color="#000" size={20} />
-                <Text style={styles.goaltext}>Define Your Goal</Text>
-              </TouchableOpacity>
-            </>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+              <View style={styles.ButtonView}>
+                <Icon name="medal-outline" color="#00BDD6" size={20} />
+                <Text style={styles.goaltext}>Best Curriculum</Text>
+              </View>
+              <View style={styles.ButtonView}>
+                <Icon name="ribbon-outline" color="#00BDD6" size={20} />
+                <Text style={styles.goaltext}>Certified Course</Text>
+              </View>
+            </View>
           )}
         </View>
 
@@ -301,7 +294,8 @@ const DAnimation = () => {
           <View style={styles.summaryRow}>
             {/* Main Rating */}
             <View>
-              <Text style={styles.ratingText}>4.8</Text>
+              {/* Display dynamic rating */}
+              <Text style={styles.ratingText}>{parseFloat(rating) || 0}</Text>
 
               <View style={styles.starRow}>
                 {Array(5)
@@ -311,12 +305,13 @@ const DAnimation = () => {
                       key={i}
                       name="star"
                       size={18}
-                      color={i < 4 ? "#000" : "#ccc"}
+                      // Compare index against parsed rating
+                      color={i < (parseFloat(rating) || 0) ? "#000" : "#ccc"}
                     />
                   ))}
               </View>
 
-              <Text style={styles.reviewCount}>150 reviews</Text>
+              <Text style={styles.reviewCount}>{courseData?.total_reviews || 0} reviews</Text>
             </View>
 
             {/* Rating Bars */}
@@ -429,7 +424,7 @@ const styles = StyleSheet.create({
     width: wp("10%"),
     height: wp("10%"),
     borderRadius: wp("10%"),
-    backgroundColor: "#2D6EFF",
+    backgroundColor: "#00BDD6",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -438,6 +433,9 @@ const styles = StyleSheet.create({
     fontSize: RFPercentage(2.5),
     fontWeight: "700",
     color: "#000",
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 10,
   },
   discountText: {
     fontSize: RFPercentage(2),
@@ -575,8 +573,6 @@ const styles = StyleSheet.create({
   },
   enrollButton: {
     backgroundColor: "#000",
-    // paddingVertical: hp("1.5%"),
-    // paddingHorizontal: wp("5%"),
     width: wp("90%"),
     height: hp("6%"),
     alignSelf: "center",

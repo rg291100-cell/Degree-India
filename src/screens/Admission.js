@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {
@@ -16,19 +17,109 @@ import { RFPercentage } from 'react-native-responsive-fontsize';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getApi } from '../config/api';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Separate component or inline render to handle individual expansion state
+const AdmissionItem = ({ item }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  return (
+    <View style={styles.listItem}>
+
+      {/* Header Info */}
+      <View style={styles.listHeader}>
+        <Text style={styles.courseTitle}>{item.course?.title || 'Unknown Course'}</Text>
+        <Text style={styles.collegeName}>{item.college_name || 'N/A'}</Text>
+        <Text style={styles.admissionDate}>Admission Date: {formatDate(item.admission_date)}</Text>
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* Fees Section - Always Visible */}
+      <View style={styles.rowSpecs}>
+        <View style={styles.specItem}>
+          <Text style={styles.label}>Total Fees</Text>
+          <Text style={styles.valueHighlight}>₹{item.total_fees || '0'}</Text>
+        </View>
+        <View style={styles.specItem}>
+          <Text style={styles.label}>Paid Fees</Text>
+          <Text style={styles.valueHighlight}>₹{item.paid_fees || '0'}</Text>
+        </View>
+      </View>
+
+      {/* Expandable Details Section */}
+      {expanded && (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.detailsGrid}>
+
+            <View style={styles.gridItem}>
+              <Text style={styles.label}>Type</Text>
+              <Text style={styles.value}>{item.course?.course_type || 'N/A'}</Text>
+            </View>
+
+            <View style={styles.gridItem}>
+              <Text style={styles.label}>Mode</Text>
+              <Text style={styles.value}>{item.course?.course_mode || 'N/A'}</Text>
+            </View>
+
+            <View style={styles.gridItem}>
+              <Text style={styles.label}>Duration</Text>
+              <Text style={styles.value}>
+                {item.course?.duration} {item.course?.duration_unit}
+              </Text>
+            </View>
+
+            <View style={styles.gridItem}>
+              <Text style={styles.label}>Format</Text>
+              <Text style={styles.value}>{item.course?.learning_format || 'N/A'}</Text>
+            </View>
+
+            <View style={styles.gridItem}>
+              <Text style={styles.label}>Session</Text>
+              <Text style={styles.value}>{item.course?.total_sessions || 'N/A'}</Text>
+            </View>
+
+          </View>
+        </>
+      )}
+
+      {/* Toggle Arrow */}
+      <TouchableOpacity
+        style={styles.arrowContainer}
+        onPress={() => setExpanded(!expanded)}
+      >
+        <Icon
+          name={expanded ? "chevron-up-outline" : "chevron-down-outline"}
+          size={24}
+          color="#888"
+        />
+      </TouchableOpacity>
+
+    </View>
+  );
+};
+
 const AdmissionScreen = ({ navigation }) => {
-  const [admission, setAdmission] = useState(null);
+  const [admissions, setAdmissions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false); // Hide details by default
 
   const getMyAdmissions = async () => {
     try {
       setLoading(true);
+      const token = await AsyncStorage.getItem('AUTH_TOKEN');
+      console.log('User Token:', token);
+
       const res = await getApi('/admissions/my-admissions', true);
-      console.log('My Admissions Data:', res);
-      // ✅ FIX: Backend returns 'admissions' key, not 'data'
-      const data = res?.admissions?.[0] || null;
-      setAdmission(data);
+
+      if (res?.admissions) {
+        setAdmissions(res.admissions);
+      }
     } catch (error) {
       console.log('Error fetching admissions:', error);
     } finally {
@@ -39,14 +130,6 @@ const AdmissionScreen = ({ navigation }) => {
   useEffect(() => {
     getMyAdmissions();
   }, []);
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2D6EFF" />
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -64,93 +147,21 @@ const AdmissionScreen = ({ navigation }) => {
         <Text style={styles.headerTitle}>My Admission Desk</Text>
       </View>
 
-      <View style={styles.cardWrapper}>
-        <View style={styles.topBox} />
-
-        <View style={styles.detailsWrapper}>
-
-          {!admission ? (
-            <Text style={{ textAlign: 'center', marginTop: 20 }}>No Admission Found</Text>
-          ) : (
-            <>
-              <View style={styles.row}>
-                <View style={styles.item}>
-                  <Icon name="document-text-outline" size={20} color="#000" />
-                  <View>
-                    <Text style={styles.label}>Enrolment No.</Text>
-                    <Text style={styles.value}>{admission.enrollment_no || 'N/A'}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.item}>
-                  <Icon name="cash-outline" size={20} color="#000" />
-                  <View>
-                    <Text style={styles.label}>Total Fees</Text>
-                    <Text style={styles.value}>{admission.total_fees || '0'}</Text>
-                  </View>
-                </View>
-              </View>
-
-              {expanded && (
-                <>
-                  {/* Row 2 */}
-                  <View style={styles.row}>
-                    <View style={styles.item}>
-                      <Icon name="school-outline" size={20} color="#000" />
-                      <View>
-                        <Text style={styles.label}>College / University</Text>
-                        <Text style={styles.value}>{admission.university_name || admission.college_name || 'N/A'}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.item}>
-                      <Icon name="card-outline" size={20} color="#000" />
-                      <View>
-                        <Text style={styles.label}>Paid Fees</Text>
-                        <Text style={styles.value}>{admission.paid_fees || '0'}</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Row 3 */}
-                  <View style={styles.row}>
-                    <View style={styles.item}>
-                      <Icon name="time-outline" size={20} color="#000" />
-                      <View>
-                        <Text style={styles.label}>Course Type</Text>
-                        <Text style={styles.value}>{admission.course_type || 'Full Time'}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.item}>
-                      <Icon name="book-outline" size={20} color="#000" />
-                      <View>
-                        <Text style={styles.label}>Medium</Text>
-                        <Text style={styles.value}>{admission.medium || 'English'}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </>
-              )}
-            </>
-          )}
-
-        </View>
-
-        {/* Bottom arrow - Toggle details */}
-        {admission && (
-          <TouchableOpacity
-            style={styles.bottomArrow}
-            onPress={() => setExpanded(!expanded)}
-          >
-            <Icon
-              name={expanded ? "chevron-up-outline" : "chevron-down-outline"}
-              size={30}
-              color="black"
-            />
-          </TouchableOpacity>
+      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color="#2D6EFF" />
+          </View>
+        ) : admissions.length > 0 ? (
+          admissions.map((item, index) => (
+            <AdmissionItem key={index} item={item} />
+          ))
+        ) : (
+          <View style={styles.center}>
+            <Text style={{ textAlign: 'center', marginTop: 20, fontSize: 16 }}>No Admission Found</Text>
+          </View>
         )}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -160,83 +171,112 @@ export default AdmissionScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5', // Slightly darker bg for contrast
   },
   center: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    marginTop: 50
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 15,
-    gap: 50,
-    marginTop: hp('0.9%'),
+    backgroundColor: '#fff',
+    elevation: 2,
+    marginBottom: 10
   },
   backBtn: {
-    width: wp('10%'),
-    height: wp('10%'),
+    width: 40,
+    height: 40,
     backgroundColor: '#2D6EFF',
-    borderRadius: wp('10%'),
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 15
   },
   headerTitle: {
     fontSize: RFPercentage(2.5),
     fontWeight: '600',
     fontFamily: 'Poppins-SemiBold',
+    color: '#000'
   },
-  cardWrapper: {
-    width: wp('90%'),
+  listItem: {
+    width: wp('92%'),
     alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: wp('3%'),
-    marginTop: hp('4%'),
-    backgroundColor: '#fff',
-    paddingBottom: hp('2%'),
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    marginTop: 15,
+    padding: 15,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  topBox: {
-    height: hp('20%'),
-    borderTopLeftRadius: wp('3%'),
-    borderTopRightRadius: wp('3%'),
-    backgroundColor: '#f0f0f0' // added visible bg
-  },
-  detailsWrapper: {
-    paddingHorizontal: wp('4%'),
-    paddingTop: hp('1%'),
-  },
-  row: {
-    flexDirection: 'row',
+  arrowContainer: {
     alignItems: 'center',
-    gap: 10,
-    marginTop: hp('2%'),
+    marginTop: 10,
+    paddingTop: 5,
+  },
+  listHeader: {
+    marginBottom: 5,
+  },
+  courseTitle: {
+    fontSize: RFPercentage(2),
+    fontFamily: 'Poppins-SemiBold',
+    color: '#000',
+    marginBottom: 2
+  },
+  collegeName: {
+    fontSize: RFPercentage(1.6),
+    fontFamily: 'Poppins-Regular',
+    color: '#555',
+  },
+  admissionDate: {
+    fontSize: RFPercentage(1.5),
+    fontFamily: 'Poppins-Medium',
+    color: '#888',
+    marginTop: 2
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#f0f0f0',
+    marginVertical: 12
+  },
+  rowSpecs: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: hp('2%'),
-    borderBottomColor: '#eaeaea',
-    borderBottomWidth: 1,
+    marginBottom: 5
   },
-  item: {
-    width: wp('40%'),
+  specItem: {
+    alignItems: 'flex-start',
+  },
+  valueHighlight: {
+    fontSize: RFPercentage(2),
+    fontFamily: 'Poppins-Bold',
+    color: '#2D6EFF',
+  },
+  detailsGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 15
+  },
+  gridItem: {
+    width: '30%',
+    marginBottom: 10,
   },
   label: {
-    fontSize: RFPercentage(1.6),
-    color: '#444',
+    fontSize: RFPercentage(1.4),
+    color: '#999',
     fontFamily: 'Poppins-Regular',
   },
   value: {
-    fontSize: RFPercentage(2),
-    fontWeight: '600',
-    fontFamily: 'Poppins-Regular',
-    flexWrap: 'wrap',
-    maxWidth: wp('30%')
-  },
-  bottomArrow: {
-    alignSelf: 'center',
-    marginTop: hp('2%'),
+    fontSize: RFPercentage(1.6),
+    color: '#333',
+    fontFamily: 'Poppins-Medium',
+    marginTop: 2
   },
 });

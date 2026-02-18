@@ -84,6 +84,12 @@ const Course = () => {
     item?.name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // 🔹 Helper to lighten hex colors
+  const getLightColor = (color) => {
+    if (!color || typeof color !== 'string' || !color.startsWith('#')) return '#F0F9FF';
+    return color + '15'; // ~8% opacity for a very subtle tint
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#fff" barStyle="dark-content" />
@@ -103,7 +109,7 @@ const Course = () => {
 
       {/* ---------- Search Bar ---------- */}
       <View style={styles.searchContainer}>
-        <IonIcon name="search-outline" size={22} color="#2D6EFF" />
+        <IonIcon name="search-outline" size={22} color="#00BDD6" />
         <TextInput
           placeholder="Search Courses"
           placeholderTextColor="#555"
@@ -118,7 +124,7 @@ const Course = () => {
       <ScrollView showsVerticalScrollIndicator={false}>
         {loading ? (
           <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#000" />
+            <ActivityIndicator size="large" color="#00BDD6" />
             <Text style={styles.loadingText}>Loading courses...</Text>
           </View>
         ) : (
@@ -132,7 +138,11 @@ const Course = () => {
                     key={item.id}
                     style={[
                       styles.courseCard,
-                      { backgroundColor: item.color || '#EEF2FF' },
+                      {
+                        backgroundColor: getLightColor(item.color),
+                        borderColor: (item.color || '#00BDD6') + '30', // subtle border
+                        borderWidth: 1
+                      },
                     ]}
                     onPress={() =>
                       navigation.navigate('CourseDetails', {
@@ -142,8 +152,8 @@ const Course = () => {
                       })
                     }
                   >
-                    <Icon name={iconName} size={26} color="#fff" />
-                    <Text style={[styles.courseTitle, { color: '#fff' }]}>
+                    <Icon name={iconName} size={26} color={item.color || '#00BDD6'} />
+                    <Text style={[styles.courseTitle, { color: item.color || '#334155' }]}>
                       {item.name}</Text>
                   </TouchableOpacity>
                 );
@@ -154,35 +164,7 @@ const Course = () => {
               <Text style={styles.emptyText}>No courses found</Text>
             )}
 
-            {/* Testimonials Section */}
-            {testimonials.length > 0 && (
-              <View style={styles.testimonialsSection}>
-                <Text style={styles.sectionTitle}>What Our Students Say</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.testimonialsContainer}
-                >
-                  {testimonials.map((item, index) => (
-                    <View key={index} style={styles.testimonialCard}>
-                      <Text style={styles.testimonialText} numberOfLines={4}>
-                        "{item.message || item.testimonial || item.text}"
-                      </Text>
-                      <View style={styles.testimonialFooter}>
-                        <Text style={styles.testimonialName}>
-                          {item.name || item.user_name || 'Anonymous'}
-                        </Text>
-                        {item.designation && (
-                          <Text style={styles.testimonialDesignation}>
-                            {item.designation}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+
           </>
         )}
       </ScrollView>
@@ -211,7 +193,7 @@ const styles = StyleSheet.create({
     width: wp('10%'),
     height: wp('10%'),
     borderRadius: wp('10%'),
-    backgroundColor: '#2D6EFF',
+    backgroundColor: '#00BDD6',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -256,7 +238,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: hp('2%'),
-    elevation: 3,
+    // Removed elevation/shadow for a cleaner look
   },
 
   testimonialsSection: {
@@ -284,11 +266,7 @@ const styles = StyleSheet.create({
     borderRadius: wp('4%'),
     padding: wp('4%'),
     marginRight: wp('4%'),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    // Removed shadows for a flat look
   },
 
   testimonialText: {
@@ -310,7 +288,7 @@ const styles = StyleSheet.create({
   testimonialName: {
     fontSize: RFPercentage(2),
     fontWeight: '600',
-    color: '#2D6EFF',
+    color: '#00BDD6',
     fontFamily: 'Poppins-SemiBold',
   },
 

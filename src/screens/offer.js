@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -21,13 +22,12 @@ const Offer = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // 🔹 Fetch offers
   const fetchOffers = async () => {
     try {
       setLoading(true);
-      const data = await getApi('/offers');
-      console.log('Offers response:', data);
-      setOffers(data?.all_offers || data?.data?.all_offers || []);
+      const res = await getApi('/offers');
+      const data = res?.data?.all_offers || res?.all_offers || [];
+      setOffers(data);
     } catch (error) {
       console.error('Error fetching offers:', error);
       Alert.alert('Error', 'Unable to fetch offers.');
@@ -36,7 +36,6 @@ const Offer = () => {
     }
   };
 
-  // 🔹 Pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchOffers();
@@ -47,154 +46,118 @@ const Offer = () => {
     fetchOffers();
   }, []);
 
-  const renderOfferItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.offerCard}
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate('DAnimation', { data: item })}
-    >
-      {/* Banner/Thumbnail */}
-      {item.banner || item.thumbnail ? (
-        <Image
-          source={{ uri: `${BASE_IMAGE_URL}${item.banner || item.thumbnail}` }}
-          style={styles.offerImage}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={[styles.offerImage, styles.placeholderImage]}>
-          <Icon name="school" size={50} color="#ccc" />
-        </View>
-      )}
+  const renderOfferItem = ({ item }) => {
+    const savings = parseFloat(item.savings_amount) || 0;
+    const hasImage = item.banner || item.thumbnail;
 
-      <View style={styles.offerContent}>
-        {/* Course Title */}
-        <Text style={styles.courseTitle} numberOfLines={2}>
-          {item.course_title}
-        </Text>
-
-        {/* College Name */}
-        <View style={styles.infoRow}>
-          <Icon name="business" size={14} color="#666" />
-          <Text style={styles.collegeName} numberOfLines={1}>
-            {item.college_name}
-          </Text>
-        </View>
-
-        {/* Category & Mode */}
-        <View style={styles.tagsContainer}>
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>{item.category_name}</Text>
-          </View>
-          <View style={[styles.tag, { backgroundColor: '#E3F2FD' }]}>
-            <Text style={[styles.tagText, { color: '#1976D2' }]}>
-              {item.course_mode?.toUpperCase()}
+    return (
+      <TouchableOpacity
+        style={styles.voucherCard}
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('DAnimation', { data: item })}
+      >
+        {/* College Name Section - Fully Visible */}
+        <View style={styles.collegeHeader}>
+          <View style={styles.collegeInfoRow}>
+            <View style={styles.verifyIconBox}>
+              <Icon name="verified" size={18} color="#00BDD6" />
+            </View>
+            <Text style={styles.collegeNameFull}>
+              {item.college_name || 'Premium Academic Partner'}
             </Text>
           </View>
-        </View>
-
-        {/* Duration & Type */}
-        <View style={styles.detailsRow}>
-          <View style={styles.detailItem}>
-            <Icon name="access-time" size={14} color="#666" />
-            <Text style={styles.detailText}>{item.duration}</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Icon name="card-membership" size={14} color="#666" />
-            <Text style={styles.detailText}>{item.course_type}</Text>
+          <View style={styles.officialBadge}>
+            <Text style={styles.officialText}>OFFICIAL</Text>
           </View>
         </View>
 
-        {/* Pricing Section */}
-        <View style={styles.pricingSection}>
-          {/* Discount Badge */}
-          {item.discount_percentage > 0 && (
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>
-                {item.discount_percentage}% OFF
-              </Text>
+        {/* The Ticket Divider */}
+        <View style={styles.ticketDivider}>
+          <View style={[styles.circleCut, { left: -10 }]} />
+          <View style={styles.dashLine} />
+          <View style={[styles.circleCut, { right: -10 }]} />
+        </View>
+
+        <View style={styles.voucherBody}>
+          <View style={styles.bodyContent}>
+            <View style={styles.imageWrapper}>
+              <Image
+                source={
+                  hasImage
+                    ? { uri: `${BASE_IMAGE_URL}${item.banner || item.thumbnail}` }
+                    : require("../assets/Image/Educational.png")
+                }
+                style={styles.offerThumbnail}
+                resizeMode="cover"
+              />
+              {item.discount_percentage > 0 && (
+                <View style={styles.discountTag}>
+                  <Text style={styles.discountTagText}>{item.discount_percentage}% OFF</Text>
+                </View>
+              )}
             </View>
-          )}
 
-          {/* Prices */}
-          <View style={styles.priceContainer}>
-            <View>
-              <Text style={styles.originalPrice}>
-                {item.currency} {parseFloat(item.fees).toLocaleString()}
+            <View style={styles.detailsBox}>
+              <Text style={styles.courseTitleLabel} numberOfLines={2}>
+                {item.course_title}
               </Text>
-              <Text style={styles.discountedPrice}>
-                {item.currency} {parseFloat(item.discounted_fees).toLocaleString()}
-              </Text>
+
+              <View style={styles.infoMeta}>
+                <Text style={styles.metaLabelText}>{item.course_mode} • {item.duration}</Text>
+              </View>
+
+              <View style={styles.pricingRow}>
+                <View>
+                  <Text style={styles.currentPrice}>
+                    {item.currency} {parseFloat(item.discounted_fees).toLocaleString()}
+                  </Text>
+                  <Text style={styles.originalPrice}>
+                    Reg: {item.currency} {parseFloat(item.fees).toLocaleString()}
+                  </Text>
+                </View>
+                {savings > 0 && (
+                  <View style={styles.savingsBoxTag}>
+                    <Text style={styles.savingsValue}>SAVE {item.currency}{Math.round(savings)}</Text>
+                  </View>
+                )}
+              </View>
             </View>
-
-            <View style={styles.savingsBox}>
-              <Text style={styles.savingsLabel}>You Save</Text>
-              <Text style={styles.savingsAmount}>
-                {item.currency} {parseFloat(item.savings_amount).toLocaleString()}
-              </Text>
-            </View>
-          </View>
-
-          {/* Admission Fee */}
-          <View style={styles.admissionFeeRow}>
-            <Text style={styles.admissionLabel}>Admission Fee:</Text>
-            <Text style={styles.admissionFee}>
-              {item.currency} {parseFloat(item.admission_fee).toLocaleString()}
-            </Text>
-          </View>
-
-          {/* Total Fees */}
-          <View style={styles.totalFeesBox}>
-            <Text style={[styles.totalLabel, {
-              fontFamily: 'Poppins-Regular',
-            }]}>Total with Admission:</Text>
-            <Text style={styles.totalFees}>
-              {item.currency} {parseFloat(item.total_fees_with_admission).toLocaleString()}
-            </Text>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        {/* <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity> */}
-        <View />
-        <Text style={styles.headerTitle}>Special Offers</Text>
-        <View style={{ width: 24 }} />
+      <StatusBar backgroundColor="#00BDD6" barStyle="light-content" />
+
+      {/* Premium Header */}
+      <View style={styles.appHeader}>
+
+        <View style={styles.headerTitles}>
+          <Text style={styles.headerLabel}>Degree India</Text>
+          <Text style={styles.headerMain}>Exclusive Admission Offers</Text>
+        </View>
+        <Icon name="local-activity" size={28} color="#FFD700" />
       </View>
 
-      {/* Content */}
       {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2196F3" />
-          <Text style={styles.loadingText}>Loading offers...</Text>
+        <View style={styles.loaderArea}>
+          <ActivityIndicator size="large" color="#00BDD6" />
+          <Text style={styles.loaderMsg}>Verifying exclusive deals...</Text>
         </View>
-      ) : offers.length > 0 ? (
+      ) : (
         <FlatList
           data={offers}
           renderItem={renderOfferItem}
-          keyExtractor={(item, index) =>
-            `${item.course_id}-${item.college_id}-${index}`
-          }
-          contentContainerStyle={styles.listContent}
+          keyExtractor={(item, index) => `${item.course_id}-${item.college_id}-${index}`}
+          contentContainerStyle={styles.listPadding}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} color="#00BDD6" />
           }
         />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Icon name="local-offer" size={80} color="#ccc" />
-          <Text style={styles.emptyText}>No offers available</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchOffers}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
       )}
     </SafeAreaView>
   );
@@ -205,218 +168,213 @@ export default Offer;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F4F7FF',
   },
-  header: {
+  appHeader: {
+    backgroundColor: '#00BDD6',
+    paddingTop: 10,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    // backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#000',
-  },
-  loadingContainer: {
-    flex: 1,
+  backCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 15,
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#666',
-  },
-  listContent: {
-    padding: 16,
-  },
-  offerCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 16,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  offerImage: {
-    width: '100%',
-    height: 180,
-    backgroundColor: '#eee',
-  },
-  placeholderImage: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  offerContent: {
-    padding: 16,
-  },
-  courseTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#000',
-    marginBottom: 8,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  collegeName: {
-    fontSize: 13,
-    fontFamily: 'Poppins-Regular',
-    color: '#666',
-    marginLeft: 6,
+  headerTitles: {
     flex: 1,
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    marginBottom: 12,
-    gap: 8,
-  },
-  tag: {
-    backgroundColor: '#FFF3E0',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  tagText: {
-    fontSize: 11,
-    fontFamily: 'Poppins-Regular',
-    color: '#E65100',
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    gap: 16,
-    fontFamily: 'Poppins-Medium',
-
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  detailText: {
+  headerLabel: {
     fontSize: 12,
-    fontFamily: 'Poppins-Regular',
-    color: '#666',
+    fontFamily: 'Poppins-Medium',
+    color: 'rgba(255,255,255,0.8)',
   },
-  pricingSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingTop: 12,
-    fontFamily: 'Poppins-Regular',
-
-  },
-  discountBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 12,
-  },
-  discountText: {
-    fontSize: 14,
+  headerMain: {
+    fontSize: 18,
     fontFamily: 'Poppins-Bold',
     color: '#fff',
+    marginTop: -2,
   },
-  priceContainer: {
+  listPadding: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  voucherCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    marginBottom: 20,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#00BDD6',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  collegeHeader: {
+    padding: 16,
+    backgroundColor: '#fff',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  collegeInfoRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  verifyIconBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#EBF2FF',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginTop: 2,
   },
-  originalPrice: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#999',
-    textDecorationLine: 'line-through',
-  },
-  discountedPrice: {
-    fontSize: 22,
+  collegeNameFull: {
+    fontSize: 15,
     fontFamily: 'Poppins-Bold',
-    color: '#2196F3',
+    color: '#1A1D1E',
+    marginLeft: 10,
+    flex: 1,
+    lineHeight: 20,
   },
-  savingsBox: {
-    alignItems: 'flex-end',
+  officialBadge: {
+    backgroundColor: '#E7F9ED',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2ECC40',
+    marginLeft: 10,
   },
-  savingsLabel: {
-    fontSize: 11,
-    fontFamily: 'Poppins-Regular',
-    color: '#666',
+  officialText: {
+    fontSize: 8,
+    fontFamily: 'Poppins-Bold',
+    color: '#2ECC40',
   },
-  savingsAmount: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#4CAF50',
-  },
-  admissionFeeRow: {
+  ticketDivider: {
+    height: 20,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
   },
-  admissionLabel: {
-    fontSize: 13,
-    fontFamily: 'Poppins-Regular',
-    color: '#666',
+  circleCut: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F4F7FF',
+    position: 'absolute',
   },
-  admissionFee: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#333',
+  dashLine: {
+    flex: 1,
+    height: 1,
+    borderWidth: 1.5,
+    borderColor: '#F0F2F5',
+    borderStyle: 'dashed',
+    borderRadius: 1,
+    marginHorizontal: 15,
   },
-  totalFeesBox: {
-    backgroundColor: '#F5F5F5',
-    padding: 12,
+  voucherBody: {
+    backgroundColor: '#fff',
+    padding: 16,
+    paddingTop: 5,
+  },
+  bodyContent: {
+    flexDirection: 'row',
+  },
+  imageWrapper: {
+    width: 90,
+    height: 110,
+    position: 'relative',
+  },
+  offerThumbnail: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 16,
+  },
+  discountTag: {
+    position: 'absolute',
+    bottom: -5,
+    right: -5,
+    backgroundColor: '#FF4136',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
+    elevation: 3,
+  },
+  discountTagText: {
+    color: '#fff',
+    fontSize: 10,
+    fontFamily: 'Poppins-Bold',
+  },
+  detailsBox: {
+    flex: 1,
+    paddingLeft: 16,
+    justifyContent: 'space-between',
+  },
+  courseTitleLabel: {
+    fontSize: 15,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#334155',
+    lineHeight: 20,
+  },
+  infoMeta: {
+    marginVertical: 4,
+  },
+  metaLabelText: {
+    fontSize: 11,
+    fontFamily: 'Poppins-Medium',
+    color: '#64748B',
+    textTransform: 'capitalize',
+  },
+  pricingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     marginTop: 8,
   },
-  totalLabel: {
-    fontSize: 13,
-    fontFamily: 'Poppins-Regular',
-    color: '#333',
+  currentPrice: {
+    fontSize: 20,
+    fontFamily: 'Poppins-Bold',
+    color: '#00BDD6',
   },
-  totalFees: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Regular',
-    color: '#E65100',
+  originalPrice: {
+    fontSize: 10,
+    fontFamily: 'Poppins-Medium',
+    color: '#94A3B8',
+    textDecorationLine: 'line-through',
+    marginTop: -4,
   },
-  emptyContainer: {
+  savingsBoxTag: {
+    backgroundColor: '#E7F9ED',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  savingsValue: {
+    fontSize: 10,
+    fontFamily: 'Poppins-Bold',
+    color: '#2ECC40',
+  },
+  loaderArea: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
   },
-  emptyText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Regular',
-    color: '#999',
-    marginTop: 16,
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#2196F3',
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#fff',
+  loaderMsg: {
+    marginTop: 10,
+    color: '#64748B',
+    fontFamily: 'Poppins-Medium',
   },
 });

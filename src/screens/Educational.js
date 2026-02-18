@@ -32,15 +32,10 @@ const Educational = () => {
   const getLatestEducationNews = async () => {
     try {
       setLoading(true);
-      // ✅ FIX: Remove auth flag - this is a public endpoint
       const data = await getApi('/news/education/latest?limit=10', false);
-      console.log('News Data:', data);
       setNews(data.data || []);
     } catch (error) {
-      console.log(
-        'ERROR =>',
-        error.response?.data || error.message
-      );
+      console.log('ERROR =>', error.message);
     } finally {
       setLoading(false);
     }
@@ -55,103 +50,107 @@ const Educational = () => {
     return url.startsWith('http') ? url : `${BASE_IMAGE_URL}${url}`;
   };
 
-  // Filter news
   const filteredNews = news.filter(item =>
     item.title?.toLowerCase().includes(search.toLowerCase()) ||
     item.description?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const displayNews = (filteredNews.length > 0 ? filteredNews : [
+    {
+      id: "d1",
+      title: "Feature Of Software Engineering",
+      description: "Join our team as a Software Engineering Intern and contribute to cutting-edge projects in a dynamic environment.\n\nJoin our team as a Software Engineering Intern and contribute to cutting-edge projects in a dynamic environment.\n\nJoin our team as a Software Engineering Intern and contribute to cutting-edge projects in a dynamic environment.",
+      author: "Hr Manager",
+      created_at: "15-sep-2025",
+      source: "Sources",
+      image_url: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=800&auto=format&fit=crop",
+      authorImage: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=200&h=200&auto=format&fit=crop"
+    }
+  ]);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* HEADER */}
+      {/* HEADER - Matches Screenshot */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.backBtn}
+          style={styles.backCircle}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={24} color="#fff" />
+          <Icon name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>Educational News</Text>
-        <View />
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* SEARCH BAR */}
-      <View style={styles.searchContainer}>
-        <Icon name="search-outline" size={22} color="#2D6EFF" />
-        <TextInput
-          placeholder="Search News"
-          placeholderTextColor="#555"
-          style={styles.input}
-          value={search}
-          onChangeText={setSearch}
-        />
-        <TouchableOpacity>
-          <Icon name="filter" size={22} color="#2D6EFF" />
-        </TouchableOpacity>
+      {/* SEARCH BAR - Light Teal Theme */}
+      <View style={styles.searchRow}>
+        <View style={styles.searchFieldBox}>
+          <Icon name="search-outline" size={22} color="#00BDD6" />
+          <TextInput
+            placeholder="Search News"
+            placeholderTextColor="#555"
+            style={styles.searchTextInput}
+            value={search}
+            onChangeText={setSearch}
+          />
+          <TouchableOpacity>
+            <Icon name="filter" size={24} color="#00BDD6" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
         {loading ? (
-          <View style={{ marginTop: 50 }}>
-            <ActivityIndicator size="large" color="#2D6EFF" />
-            <Text style={{ textAlign: 'center', marginTop: 10 }}>Loading news...</Text>
+          <View style={styles.loaderBox}>
+            <ActivityIndicator size="large" color="#00BDD6" />
           </View>
-        ) : filteredNews.length > 0 ? (
-          filteredNews.map((item, index) => (
-            <View key={item.id || index} style={styles.newsCard}>
-              {/* Top Profile Section */}
-              <View style={styles.profileRow}>
+        ) : (
+          displayNews.map((item, index) => (
+            <View key={item.id || index} style={styles.socialCard}>
+              {/* Author Row */}
+              <View style={styles.authorRow}>
                 <Image
-                  source={require("../assets/Image/Profile.png")} // Fallback or author image
-                  style={styles.profileImg}
+                  source={typeof item.authorImage === 'string' ? { uri: item.authorImage } : (item.authorImage || require("../assets/Image/Profile.png"))}
+                  style={styles.authorCircle}
                 />
-                <View>
-                  <Text style={styles.profileName}>{item.author || 'Admin'}</Text>
-                  <Text style={styles.profileDate}>{item.created_at ? new Date(item.created_at).toDateString() : 'Just now'}</Text>
+                <View style={styles.authorInfo}>
+                  <Text style={styles.roleText}>{item.author || 'Hr Manager'}</Text>
+                  <Text style={styles.dateText}>{item.created_at || '15-sep-2025'}</Text>
+                  <Text style={styles.sourceText}>{item.source || 'Sources'}</Text>
                 </View>
               </View>
 
-              {/* Title */}
-              <Text style={styles.title}>{item.title}</Text>
-
-              {/* Description */}
-              <Text style={styles.desc} numberOfLines={3}>
-                {item.description || item.content}
-              </Text>
+              {/* Text Content */}
+              <View style={styles.cardPadding}>
+                <Text style={styles.headlineText}>{item.title}</Text>
+                <Text style={styles.bodyText}>{item.description}</Text>
+              </View>
 
               {/* Featured Image */}
-              {getImageUrl(item.image_url || item.image) && (
-                <Image
-                  source={{ uri: getImageUrl(item.image_url || item.image) }}
-                  style={styles.featuredImage}
-                />
-              )}
+              <Image
+                source={item.localImage ? item.localImage : (getImageUrl(item.image_url || item.image) ? { uri: getImageUrl(item.image_url || item.image) } : require("../assets/Image/Educational.png"))}
+                style={styles.newsImage}
+              />
 
-              {/* Bottom Tab Bar */}
-              <View style={styles.bottomBar}>
-                <TouchableOpacity>
-                  <Icon name="heart-outline" size={24} color="#000" />
+              {/* Bottom Interaction Bar */}
+              <View style={styles.interactionBar}>
+                <TouchableOpacity style={styles.actionItem}>
+                  <Icon name="heart" size={24} color="#FF4D4D" />
                 </TouchableOpacity>
-
-                <TouchableOpacity>
-                  <Icon name="chatbubble-ellipses-outline" size={24} color="#000" />
+                <TouchableOpacity style={styles.actionItem}>
+                  <Icon name="chatbubble" size={20} color="#000" />
                 </TouchableOpacity>
-
-                <TouchableOpacity>
-                  <Icon name="share-social-outline" size={24} color="#000" />
+                <TouchableOpacity style={styles.actionItem}>
+                  <Icon name="download-outline" size={22} color="#000" />
                 </TouchableOpacity>
-
-                <TouchableOpacity>
-                  <Icon name="bookmark-outline" size={24} color="#000" />
+                <TouchableOpacity style={styles.actionItem}>
+                  <Icon name="share-social-outline" size={22} color="#000" />
                 </TouchableOpacity>
               </View>
             </View>
           ))
-        ) : (
-          <Text style={{ textAlign: 'center', marginTop: 50, color: '#666' }}>No news found.</Text>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -168,111 +167,122 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: wp("4%"),
-    marginTop: hp("2%"),
-    marginBottom: hp("1%"),
-    justifyContent: "space-between"
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 20,
   },
-  backBtn: {
-    width: wp("10%"),
-    height: wp("10%"),
-    borderRadius: wp("10%"),
-    backgroundColor: "#2D6EFF",
+  backCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#00BDD6",
     justifyContent: "center",
     alignItems: "center",
+    elevation: 3,
   },
   headerTitle: {
-    fontSize: RFPercentage(2.4),
-    fontFamily: 'Poppins-SemiBold',
-    color: "#000",
-    marginLeft: wp("4%"),
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: wp("90%"),
-    height: hp("6%"),
-    backgroundColor: "#EEF2FF",
-    borderRadius: wp("3%"),
-    alignSelf: "center",
-    paddingHorizontal: wp("3%"),
-    marginTop: hp("2%"),
-    justifyContent: "space-between",
-    marginBottom: 20
-  },
-  input: {
-    flex: 1,
-    fontSize: RFPercentage(2),
-    marginHorizontal: wp("2%"),
-    color: "#000",
-    fontFamily: 'Poppins-Regular',
-  },
-  newsCard: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingBottom: 20,
-    marginBottom: 20
-  },
-  profileRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: wp("5%"),
-    marginBottom: 10
-  },
-  profileImg: {
-    width: wp("10%"),
-    height: wp("10%"),
-    borderRadius: wp("5%"),
-    marginRight: wp("3%"),
-  },
-  profileName: {
-    fontSize: RFPercentage(1.8),
-    fontWeight: "600",
-    color: "#000",
-    fontFamily: 'Poppins-Regular',
-  },
-  profileDate: {
-    fontSize: RFPercentage(1.5),
-    color: "#555",
-  },
-  title: {
-    fontSize: RFPercentage(2.2),
-    fontFamily: 'Poppins-SemiBold',
-    color: "#000",
-    paddingHorizontal: wp("5%"),
-    marginBottom: hp("1%"),
-  },
-  desc: {
-    fontSize: RFPercentage(1.8),
+    fontSize: 22,
+    fontFamily: 'Poppins-Bold',
     color: "#444",
-    lineHeight: 24,
-    paddingHorizontal: wp("5%"),
-    marginBottom: hp("1%"),
-    fontFamily: 'Poppins-Regular',
   },
-  featuredImage: {
-    width: wp("90%"),
-    height: hp("25%"),
-    alignSelf: "center",
-    borderRadius: wp("3%"),
-    marginVertical: hp("2%"),
-    resizeMode: "cover",
+  searchRow: {
+    paddingHorizontal: 20,
+    marginBottom: 25,
   },
-  bottomBar: {
+  searchFieldBox: {
     flexDirection: "row",
-    justifyContent: "space-around",
     alignItems: "center",
-    width: wp("90%"),
-    height: hp("6%"),
-    backgroundColor: "#fff",
-    borderRadius: wp("3%"),
-    alignSelf: "center",
-    // elevation: 2,
-    // shadowColor: "#000",
-    // shadowOpacity: 0.05,
-    // shadowOffset: { width: 0, height: 1 },
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    marginTop: 10
+    backgroundColor: "#E0F7FA",
+    height: 55,
+    borderRadius: 12,
+    paddingHorizontal: 15,
   },
+  searchTextInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#333",
+    fontFamily: 'Poppins-Medium',
+    marginLeft: 10,
+  },
+  socialCard: {
+    backgroundColor: '#fff',
+    marginBottom: 20,
+  },
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  authorCircle: {
+    width: 65,
+    height: 65,
+    borderRadius: 33,
+    backgroundColor: '#f0f0f0',
+  },
+  authorInfo: {
+    marginLeft: 15,
+  },
+  roleText: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Bold',
+    color: '#333',
+  },
+  dateText: {
+    fontSize: 10,
+    fontFamily: 'Poppins-Medium',
+    color: '#666',
+  },
+  sourceText: {
+    fontSize: 10,
+    fontFamily: 'Poppins-Medium',
+    color: '#666',
+  },
+  cardPadding: {
+    paddingHorizontal: 20,
+  },
+  headlineText: {
+    fontSize: 18,
+    fontFamily: 'Poppins-Bold',
+    color: '#222',
+    lineHeight: 24,
+    marginBottom: 10,
+  },
+  bodyText: {
+    fontSize: 13,
+    fontFamily: 'Poppins-Regular',
+    color: '#444',
+    lineHeight: 20,
+    marginBottom: 15,
+  },
+  newsImage: {
+    width: wp('90%'),
+    height: 220,
+    alignSelf: 'center',
+    borderRadius: 12,
+  },
+  interactionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    width: wp('90%'),
+    height: 50,
+    backgroundColor: '#fff',
+    alignSelf: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 10,
+  },
+  actionItem: {
+    flex: 1,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loaderBox: {
+    marginTop: 50,
+    alignItems: 'center',
+  }
 });
